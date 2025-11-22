@@ -1,25 +1,39 @@
 # 🎵 Plex Open Playlister (Alpha)
 
-> **⚠️ Alpha Status**: This project is currently in early Alpha. The core functionality works, but expect some rough edges.
+> **⚠️ Alpha Status**: This project is currently in early Alpha.
 > *   **Gemini Integration**: Working ✅
-> *   **Ollama Integration**: Experimental / Unstable 🚧
-> *   **Settings**: Currently managed via `.env` file (UI planned).
+> *   **Ollama Integration**: Working (with `qwen2.5-coder:7b` or similar) ✅
+> *   **Journey Mode**: Working ✅
 
-**Plex Open Playlister** is a standalone Python application that acts as an intelligent DJ for your Plex Media Server. It uses Large Language Models (LLMs) to understand natural language requests (e.g., *"Funky basslines for a summer BBQ"*) and builds a playlist from your local music library.
+**Plex Open Playlister** is a standalone Python application that acts as an intelligent DJ for your Plex Media Server. It goes beyond simple shuffling by using AI and vector mathematics to curate playlists that flow perfectly.
 
 ## ✨ Features
-*   **AI-Powered Curation**: Uses Google Gemini to understand mood, genre, and era.
-*   **Fuzzy Matching**: Smartly matches AI suggestions to your actual files, handling slight spelling differences.
-*   **Batch Processing**: Capable of processing libraries with thousands of tracks by splitting them into manageable chunks.
-*   **Direct Plex Integration**: Creates the playlist directly on your server using the robust `server://` URI format.
-*   **Customizable**: Choose how many songs you want in your playlist.
+
+### 1. 🧠 AI Prompt Mode
+Describe what you want to hear in natural language.
+*   *"Funky basslines for a summer BBQ"*
+*   *"Melancholic jazz for a rainy night"*
+*   **How it works**: Uses **Hybrid Search**. First, it uses semantic vector search (embeddings) to find the top 500 relevant tracks, then uses an LLM (Gemini or Ollama) to pick the best 20.
+
+### 2. 📻 Artist Radio Mode
+Create a playlist based on a specific artist.
+*   **How it works**: Fetches "Similar Artists" from **Last.fm**, scans your library for matches, and creates a mix of the seed artist and their peers. No AI required—just pure musical metadata.
+
+### 3. 🚀 Journey Mode
+Create a seamless transition between two songs.
+*   **Start**: "Morning Mood - Edvard Grieg"
+*   **End**: "Enter Sandman - Metallica"
+*   **How it works**: Uses **Vector Interpolation**. It calculates a mathematical path through the "embedding space" of your library, finding songs that bridge the gap in style and mood, ensuring a smooth evolution from A to B.
+
+---
 
 ## 🛠️ Installation
 
 ### 1. Prerequisites
 *   Python 3.10 or higher.
 *   A running Plex Media Server.
-*   A Google Gemini API Key (Free tier available).
+*   A **Last.fm API Key** (Required for enrichment and Artist Radio).
+*   (Optional) A Google Gemini API Key or local Ollama setup.
 
 ### 2. Setup
 Clone the repository and enter the directory:
@@ -34,43 +48,47 @@ pip install -r requirements.txt
 ```
 
 ### 3. Configuration
-Create your configuration file by copying the example:
+Create your configuration file:
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` in a text editor and fill in the required values.
+Open `.env` and fill in your details:
 
-## 🔑 Finding Your Config Values
+```ini
+PLEX_URL=http://192.168.1.50:32400
+PLEX_TOKEN=your_token
+PLEX_MUSIC_SECTION_ID=1
 
-### Plex Configuration
-*   **`PLEX_URL`**: Your server's local IP address and port.
-    *   *Example*: `http://192.168.1.50:32400` (Ensure you use `http` or `https` correctly).
-*   **`PLEX_TOKEN`**: Your authentication token.
-    *   **How to find it**: Open Plex Web, go to any media item, click the **Three Dots (⋮)** > **Get Info** > **View XML**. The token is in the URL bar at the very end: `X-Plex-Token=...`
-*   **`PLEX_MUSIC_SECTION_ID`**: The ID of your music library.
-    *   **How to find it**: Open Plex Web and navigate to your Music library. Look at the URL in your browser. It will look like `.../section/2/...`. The number (e.g., `2`) is your ID.
+# AI Choice: GEMINI or OLLAMA
+LLM_CHOICE=GEMINI
+GEMINI_API_KEY=your_key
+# Or for Ollama:
+# OLLAMA_URL=http://localhost:11434/api/generate
+# LLM_MODEL=qwen2.5-coder:7b
 
-### AI Configuration
-*   **`LLM_CHOICE`**: Set this to `GEMINI`. (Ollama is currently unstable).
-*   **`GEMINI_API_KEY`**: Required for Gemini.
-    *   **Get it here**: [Google AI Studio](https://aistudio.google.com/app/apikey).
-*   **`LLM_MODEL`**: Recommended: `gemini-1.5-flash` or `gemini-2.0-flash-lite-preview-02-05`.
+# Last.fm (Required)
+LASTFM_API_KEY=your_lastfm_key
+LASTFM_SHARED_SECRET=your_secret
+```
 
-## ▶️ Usage
-
-Start the application:
+### 4. First Run & Enrichment
+Start the app:
 ```bash
 streamlit run main.py
 ```
 
-The web interface will open automatically (usually at `http://localhost:8501`).
-1.  Enter your prompt (e.g., *"90s Hip Hop with great flow"*).
-2.  Select the number of songs.
-3.  Click **Curate Playlist**.
-4.  Review the matches and click **Save to Plex**.
+1.  Go to the Sidebar.
+2.  Click **"Fetch Missing Tags"**.
+    *   This will scan your library and fetch genre tags from Last.fm for every artist.
+    *   *Note*: This takes time on the first run (approx. 0.5s per artist).
+    *   **Why?** This data powers the "Semantic Search" and "Journey Mode", making them much smarter.
+
+## 🔑 Finding Your Config Values
+*   **Plex Token**: Open an item in Plex Web > "Get Info" > "View XML". Look for `X-Plex-Token` in the URL.
+*   **Last.fm Key**: Get one [here](https://www.last.fm/api/account/create).
 
 ## 🚧 Roadmap
-*   [ ] **Frontend Settings**: Move configuration from `.env` to a settings page in the UI.
-*   [ ] **Fix Ollama**: Stabilize local LLM support.
-*   [ ] **Advanced Filtering**: Allow excluding specific artists or genres manually.
+*   [ ] **Frontend Settings**: Move configuration from `.env` to UI.
+*   [ ] **Advanced Filtering**: Exclude specific genres manually.
+*   [ ] **Mood Analysis**: Use audio analysis (BPM, key) for even better transitions.
