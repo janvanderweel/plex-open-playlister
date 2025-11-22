@@ -37,18 +37,39 @@ class LLMClient:
     def generate_playlist(self, user_prompt: str, library_context: List[Dict[str, Any]], num_songs: int = 20) -> List[str]:
         """
         Generates a list of song titles based on the user prompt and library context.
-        Uses batching to handle large libraries and avoid token limits.
+        Uses Semantic Search to pre-filter, then LLM for final curation.
         """
         import time
         import random
+        from semantic_search import SemanticSearch
         
-        # Shuffle library to ensure variety if we hit limits or stop early
-        random.shuffle(library_context) 
+        # Initialize Semantic Search
+        search_engine = SemanticSearch()
+        # This will load/create embeddings. It might take a moment on first run.
+        search_engine.index_library(library_context)
         
-        CHUNK_SIZE = 1000 # Adjust based on model limits
+        # Step 1: Semantic Search Pre-filtering
+        # We get a large pool of candidates (e.g., 500) that are semantically relevant.
+        # This filters out completely irrelevant genres/artists efficiently.
+        print("Running semantic search...")
+        semantic_candidates = search_engine.search(user_prompt, top_k=500)
+        
+        if not semantic_candidates:
+            print("Semantic search found no results. Falling back to random sample.")
+            semantic_candidates = random.sample(library_context, min(500, len(library_context)))
+            
+        print(f"Semantic search narrowed library to {len(semantic_candidates)} candidates.")
+        
+        # Step 2: LLM Curation
+        # Now we use the LLM to pick the best songs from this refined list.
+        
+        # Shuffle to ensure variety within the top matches
+        random.shuffle(semantic_candidates) 
+        
+        CHUNK_SIZE = 200 # Smaller chunks for Ollama since we have fewer total items
         all_candidates = []
         
-        simplified_library = [f"{t['title']} - {t['artist']}" for t in library_context]
+        simplified_library = [f"{t['title']} - {t['artist']}" for t in semantic_candidates]
         total_tracks = len(simplified_library)
         
         # Split into chunks
@@ -93,8 +114,8 @@ class LLMClient:
                 # Continue to next chunk instead of failing completely
                 continue
                 
-            # Rate limiting delay
-            time.sleep(2)
+            # Rate limiting delay (less critical for local Ollama but good practice)
+            time.sleep(1)
             
             # Optimization: If we have enough tracks, we could stop early.
             if len(all_candidates) >= target_candidates:
