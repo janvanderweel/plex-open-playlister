@@ -13,6 +13,9 @@ env/
 library_cache.json
 lastfm_cache.json
 embeddings_cache.pkl
+spotify_cache.json
+spotify_token.json
+essentia_cache.json
 
 # IDEs
 .vscode/

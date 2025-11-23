@@ -10,3 +10,4 @@ pandas
 altair
 plotly
 streamlit-plotly-events
+essentia

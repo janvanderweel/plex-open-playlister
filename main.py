@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from plex_client import PlexClient
 from llm_client import LLMClient
 from enrichment import LastFMClient
-from spotify_client import SpotifyClient
+from essentia_client import EssentiaClient
 from utils import match_tracks, clear_cache
 
 # Load config
@@ -34,13 +34,13 @@ def get_lastfm_client():
     return LastFMClient()
 
 @st.cache_resource
-def get_spotify_client():
-    return SpotifyClient()
+def get_essentia_client():
+    return EssentiaClient()
 
 plex_client = get_plex_client()
 llm_client = get_llm_client()
 lastfm_client = get_lastfm_client()
-spotify_client = get_spotify_client()
+essentia_client = get_essentia_client()
 
 # Sidebar
 with st.sidebar:
@@ -70,62 +70,39 @@ with st.sidebar:
     else:
         st.warning("⚠️ Last.fm Enrichment Inactive")
 
-    # Spotify Login / Status
-    if spotify_client and spotify_client.client_id:
-        # Check for auth code in URL
-        query_params = st.query_params
-        if "code" in query_params:
-            code = query_params["code"]
-            if isinstance(code, list):
-                code = code[0]
+    # Essentia Status
+    if essentia_client and essentia_client.available:
+        st.success("✅ Essentia Analysis Active")
+        if st.button("Fetch Audio Features"):
             try:
-                if spotify_client.get_token_from_code(code):
-                    st.success("✅ Spotify Logged In!")
-                    # Clear query params to clean URL
-                    st.query_params.clear()
-                    st.rerun()
+                # 1. Ensure we have a library to work with
+                if 'library_cache' not in st.session_state:
+                        with st.spinner("Fetching library..."):
+                            st.session_state.library_cache = plex_client.fetch_library()
+                
+                lib = st.session_state.library_cache
+                
+                # 2. Fetch missing features (updates JSON cache)
+                essentia_client.fetch_missing_features(lib)
+                
+                # 3. Re-apply features to the in-memory library immediately
+                st.session_state.library_cache = essentia_client.apply_features(lib)
+                
+                # 4. Fallback to Last.fm Estimates
+                if lastfm_client:
+                    with st.spinner("Estimating missing features from Last.fm tags..."):
+                        # Ensure tags are applied
+                        st.session_state.library_cache = lastfm_client.apply_tags(st.session_state.library_cache)
+                        # Estimate
+                        st.session_state.library_cache = lastfm_client.apply_estimated_features(st.session_state.library_cache)
+                
+                st.success("Audio features updated successfully (including estimates)!")
+                st.rerun() # Force UI update
             except Exception as e:
-                st.error(f"Login failed: {e}")
-
-        # Check if we have a valid token
-        token = spotify_client._get_token()
-        
-        if token:
-            st.success("✅ Spotify Analysis Active")
-            if st.button("Fetch Audio Features"):
-                try:
-                    # 1. Ensure we have a library to work with
-                    if 'library_cache' not in st.session_state:
-                         with st.spinner("Fetching library..."):
-                             st.session_state.library_cache = plex_client.fetch_library()
-                    
-                    lib = st.session_state.library_cache
-                    
-                    # 2. Fetch missing features (updates JSON cache)
-                    spotify_client.fetch_missing_features(lib)
-                    
-                    # 3. Re-apply features to the in-memory library immediately
-                    st.session_state.library_cache = spotify_client.apply_features(lib)
-                    
-                    # 4. Fallback to Last.fm Estimates
-                    if lastfm_client:
-                        with st.spinner("Estimating missing features from Last.fm tags..."):
-                            # Ensure tags are applied
-                            st.session_state.library_cache = lastfm_client.apply_tags(st.session_state.library_cache)
-                            # Estimate
-                            st.session_state.library_cache = lastfm_client.apply_estimated_features(st.session_state.library_cache)
-                    
-                    st.success("Audio features updated successfully (including estimates)!")
-                    st.rerun() # Force UI update
-                except Exception as e:
-                    st.error(f"Error fetching features: {e}")
-        else:
-            st.warning("⚠️ Spotify Login Required")
-            auth_url = spotify_client.get_auth_url()
-            st.link_button("Login with Spotify", auth_url)
-            
+                st.error(f"Error fetching features: {e}")
     else:
-        st.warning("⚠️ Spotify Analysis Inactive (Missing Credentials)")
+        st.warning("⚠️ Essentia Analysis Inactive (Not Installed)")
+        st.info("Install essentia with `pip install essentia` or `pip install essentia-tensorflow`")
         
     st.divider()
     
@@ -138,9 +115,9 @@ with st.sidebar:
             tagged = sum(1 for t in lib if 'tags' in t and t['tags'])
             st.caption(f"🏷️ Last.fm Coverage: {tagged}/{total} ({int(tagged/total*100)}%)")
             
-            # Spotify Stats
-            analyzed = sum(1 for t in lib if 'valence' in t and t['valence'] is not None)
-            st.caption(f"🎵 Spotify Coverage: {analyzed}/{total} ({int(analyzed/total*100)}%)")
+            # Essentia Stats
+            analyzed = sum(1 for t in lib if 'bpm' in t and t['bpm'] is not None)
+            st.caption(f"🎵 Essentia Coverage: {analyzed}/{total} ({int(analyzed/total*100)}%)")
     
     st.divider()
     
@@ -209,8 +186,8 @@ with col1:
                  try:
                      st.session_state.library_cache = plex_client.fetch_library()
                      # Apply features if available
-                     if spotify_client:
-                         st.session_state.library_cache = spotify_client.apply_features(st.session_state.library_cache)
+                     if essentia_client:
+                         st.session_state.library_cache = essentia_client.apply_features(st.session_state.library_cache)
                      if lastfm_client:
                          st.session_state.library_cache = lastfm_client.apply_tags(st.session_state.library_cache)
                          st.session_state.library_cache = lastfm_client.apply_estimated_features(st.session_state.library_cache)
@@ -395,8 +372,8 @@ if st.button("Curate Playlist", type="primary", disabled=not (plex_client and (l
                     library = lastfm_client.apply_tags(library)
                 
                 # 1c. Enrich Audio Features (Fast Apply)
-                if spotify_client:
-                    library = spotify_client.apply_features(library)
+                if essentia_client:
+                    library = essentia_client.apply_features(library)
 
                 # 1d. Fallback Estimates
                 if lastfm_client:
@@ -407,7 +384,7 @@ if st.button("Curate Playlist", type="primary", disabled=not (plex_client and (l
                         # 1. Fetch Library (cached)
                         library = st.session_state.library_cache if 'library_cache' in st.session_state else plex_client.fetch_library()
                         if lastfm_client: library = lastfm_client.apply_tags(library)
-                        if spotify_client: library = spotify_client.apply_features(library)
+                        if essentia_client: library = essentia_client.apply_features(library)
                         
                         new_items = []
                         

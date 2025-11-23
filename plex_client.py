@@ -75,6 +75,7 @@ class PlexClient:
                     "album": item.get("parentTitle", "Unknown Album"),
                     "key": item.get("ratingKey"),
                     "part_key": part_key,
+                    "file_path": parts[0].get("file") if parts else None,
                     "duration": item.get("duration")
                 })
             
