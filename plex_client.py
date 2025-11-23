@@ -61,11 +61,20 @@ class PlexClient:
             metadata = data.get("MediaContainer", {}).get("Metadata", [])
             
             for item in metadata:
+                # Extract Media Part Key for streaming
+                media_items = item.get("Media", [])
+                part_key = None
+                if media_items:
+                    parts = media_items[0].get("Part", [])
+                    if parts:
+                        part_key = parts[0].get("key")
+
                 tracks.append({
                     "title": item.get("title"),
                     "artist": item.get("grandparentTitle", "Unknown Artist"), # grandparentTitle is usually Album Artist
                     "album": item.get("parentTitle", "Unknown Album"),
                     "key": item.get("ratingKey"),
+                    "part_key": part_key,
                     "duration": item.get("duration")
                 })
             
@@ -77,6 +86,14 @@ class PlexClient:
             safe_url = url.replace(self.token, "REDACTED") if self.token else url
             print(f"Error fetching Plex library from {safe_url}: {e}")
             raise e
+
+    def get_stream_url(self, part_key: str) -> str:
+        """
+        Constructs a direct stream URL for a media part.
+        """
+        if not part_key:
+            return None
+        return f"{self.base_url}{part_key}?X-Plex-Token={self.token}"
 
     def create_playlist(self, name: str, track_keys: List[str]) -> str:
         """

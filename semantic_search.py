@@ -126,15 +126,67 @@ class SemanticSearch:
             
             found_next = False
             
-            # First pass: Try to find a unique artist
-            for idx in top_indices[:100]:
+            # First pass: Try to find a unique artist with compatible audio features
+            best_candidate = None
+            best_score = -1
+            
+            # Look at top 50 candidates
+            for idx in top_indices[:50]:
                 candidate = self.library_data[idx]
-                if idx not in used_indices and candidate['artist'] not in used_artists:
-                    journey_tracks.append(candidate)
-                    used_indices.add(idx)
-                    used_artists.add(candidate['artist'])
-                    found_next = True
-                    break
+                
+                # Skip if already used or artist used
+                if idx in used_indices or candidate['artist'] in used_artists:
+                    continue
+                    
+                # Calculate Audio Feature Score
+                audio_score = 0
+                
+                # BPM Continuity (if available)
+                if 'bpm' in candidate and candidate['bpm'] and 'bpm' in journey_tracks[-1] and journey_tracks[-1]['bpm']:
+                    prev_bpm = journey_tracks[-1]['bpm']
+                    curr_bpm = candidate['bpm']
+                    # Penalty for large BPM jumps
+                    bpm_diff = abs(prev_bpm - curr_bpm)
+                    if bpm_diff < 10:
+                        audio_score += 0.5
+                    elif bpm_diff < 20:
+                        audio_score += 0.2
+                    else:
+                        audio_score -= 0.2
+                
+                # Key Compatibility (Camelot Wheel logic simplified)
+                # This is complex to implement fully without a library, but we can check for same key/mode
+                if 'key' in candidate and 'key' in journey_tracks[-1]:
+                    if candidate['key'] == journey_tracks[-1]['key'] and candidate['mode'] == journey_tracks[-1]['mode']:
+                         audio_score += 0.3
+                
+                # Semantic Score (implied by rank, but let's normalize rank)
+                # Rank 0 is best.
+                rank_score = 1.0 - (list(top_indices).index(idx) / 50.0)
+                
+                total_score = rank_score + audio_score
+                
+                if total_score > best_score:
+                    best_score = total_score
+                    best_candidate = candidate
+                    best_idx = idx
+            
+            if best_candidate:
+                journey_tracks.append(best_candidate)
+                used_indices.add(best_idx)
+                used_artists.add(best_candidate['artist'])
+                found_next = True
+            
+            # Fallback: Just pick the best unique artist if audio scoring failed
+            if not found_next:
+                 for idx in top_indices[:100]:
+                    candidate = self.library_data[idx]
+                    if idx not in used_indices and candidate['artist'] not in used_artists:
+                        journey_tracks.append(candidate)
+                        used_indices.add(idx)
+                        used_artists.add(candidate['artist'])
+                        found_next = True
+                        break
             
             # Second pass: If no unique artist found, just pick the best unique track
             if not found_next:

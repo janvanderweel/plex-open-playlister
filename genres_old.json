@@ -1,0 +1,93 @@
+{
+  "name": "All Music",
+  "children": [
+    {
+      "name": "Rock",
+      "children": [
+        {"name": "Alternative Rock", "aliases": ["alt rock", "indie rock", "grunge"]},
+        {"name": "Classic Rock", "aliases": ["60s", "70s", "80s rock"]},
+        {"name": "Hard Rock", "aliases": ["hardrock"]},
+        {"name": "Metal", "aliases": ["heavy metal"], "children": [
+            {"name": "Thrash Metal", "aliases": ["thrash"]},
+            {"name": "Death Metal", "aliases": ["death"]},
+            {"name": "Black Metal", "aliases": ["black"]},
+            {"name": "Nu Metal", "aliases": ["numetal"]}
+        ]},
+        {"name": "Punk", "aliases": ["punk rock"], "children": [
+            {"name": "Pop Punk", "aliases": ["poppunk"]},
+            {"name": "Hardcore", "aliases": ["hardcore punk"]}
+        ]},
+        {"name": "Progressive Rock", "aliases": ["prog", "prog rock"]}
+      ]
+    },
+    {
+      "name": "Electronic",
+      "aliases": ["electronica", "electro"],
+      "children": [
+        {"name": "House", "aliases": ["deep house", "tech house"]},
+        {"name": "Techno", "aliases": ["minimal techno"]},
+        {"name": "Trance", "aliases": ["psytrance"]},
+        {"name": "Drum and Bass", "aliases": ["dnb", "drum & bass", "jungle"]},
+        {"name": "Ambient", "aliases": ["chillout", "downtempo"]},
+        {"name": "Synthwave", "aliases": ["retrowave", "synthpop"]}
+      ]
+    },
+    {
+      "name": "Pop",
+      "children": [
+        {"name": "Indie Pop", "aliases": ["indiepop"]},
+        {"name": "Synth Pop", "aliases": ["synth-pop"]},
+        {"name": "Dance Pop", "aliases": ["dance"]}
+      ]
+    },
+    {
+      "name": "Hip Hop",
+      "aliases": ["rap", "hip-hop"],
+      "children": [
+        {"name": "Old School", "aliases": ["90s rap", "boom bap"]},
+        {"name": "Trap", "aliases": ["trap music"]},
+        {"name": "Gangsta Rap", "aliases": ["gangsta"]}
+      ]
+    },
+    {
+      "name": "Jazz",
+      "children": [
+        {"name": "Bebop", "aliases": ["hard bop"]},
+        {"name": "Fusion", "aliases": ["jazz fusion"]},
+        {"name": "Smooth Jazz", "aliases": ["smooth"]}
+      ]
+    },
+    {
+      "name": "R&B",
+      "aliases": ["rnb", "soul", "funk"],
+      "children": [
+        {"name": "Soul", "aliases": ["neo-soul", "motown"]},
+        {"name": "Funk", "aliases": ["p-funk"]},
+        {"name": "Disco", "aliases": ["disco"]}
+      ]
+    },
+    {
+      "name": "Classical",
+      "aliases": ["classic"],
+      "children": [
+        {"name": "Baroque", "aliases": ["bach", "vivaldi"]},
+        {"name": "Romantic", "aliases": ["beethoven", "chopin"]}
+      ]
+    },
+    {
+      "name": "Reggae",
+      "aliases": ["dub", "ska"],
+      "children": [
+        {"name": "Roots Reggae", "aliases": ["roots"]},
+        {"name": "Dancehall", "aliases": ["bashment"]}
+      ]
+    },
+    {
+      "name": "Folk",
+      "aliases": ["acoustic", "singer-songwriter"],
+      "children": [
+        {"name": "Country", "aliases": ["americana", "bluegrass"]}
+      ]
+    }
+  ]
+}

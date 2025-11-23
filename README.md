@@ -23,7 +23,17 @@ Create a playlist based on a specific artist.
 Create a seamless transition between two songs.
 *   **Start**: "Morning Mood - Edvard Grieg"
 *   **End**: "Enter Sandman - Metallica"
-*   **How it works**: Uses **Vector Interpolation**. It calculates a mathematical path through the "embedding space" of your library, finding songs that bridge the gap in style and mood, ensuring a smooth evolution from A to B.
+*   **How it works**: Uses **Vector Interpolation** and **Audio Analysis**. It calculates a path through the embedding space while ensuring smooth transitions in BPM and Key (via Spotify data).
+
+### 4. 🎭 Mood Map Mode
+Visualize your library on a 2D emotional map.
+*   **Axes**: Valence (Happy/Sad) vs. Energy (Chill/Intense).
+*   **How it works**: Plots your tracks using Spotify audio features. You simply drag the sliders to pick a target mood (e.g., "High Energy + High Happiness" for a party), and it finds the closest songs mathematically.
+
+### 5. 🧭 Genre Explorer
+Visualize your music collection as an interactive taxonomy tree.
+*   **Visualization**: A Sunburst Chart allows you to see the breakdown of genres (Rock -> Metal -> Thrash).
+*   **How it works**: Maps unstructured Last.fm tags to a structured genre hierarchy. You can select any node (e.g., "Jazz") to play a mix of that genre and all its sub-genres.
 
 ---
 

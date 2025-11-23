@@ -66,4 +66,32 @@ def match_tracks(suggested_titles: List[str], library_data: List[Dict[str, Any]]
                     "suggestion": suggestion
                 })
     
+    
     return matched_tracks
+
+def normalize_key(title: str, artist: str) -> str:
+    """
+    Creates a normalized key for caching/matching.
+    Rules:
+    - Lowercase
+    - Remove text in () or []
+    - Remove punctuation
+    - Remove leading 'the ' from artist
+    """
+    import re
+    
+    def clean(s):
+        if not s: return ""
+        s = s.lower()
+        s = re.sub(r'\([^)]*\)', '', s) # Remove (text)
+        s = re.sub(r'\[[^]]*\]', '', s) # Remove [text]
+        s = re.sub(r'[^\w\s]', '', s)   # Remove punctuation
+        return s.strip()
+        
+    c_title = clean(title)
+    c_artist = clean(artist)
+    
+    if c_artist.startswith("the "):
+        c_artist = c_artist[4:]
+        
+    return f"{c_title} - {c_artist}"

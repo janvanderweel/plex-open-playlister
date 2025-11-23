@@ -6,3 +6,7 @@ thefuzz
 python-Levenshtein
 sentence-transformers
 scikit-learn
+pandas
+altair
+plotly
+streamlit-plotly-events
