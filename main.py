@@ -5,7 +5,7 @@ from plex_client import PlexClient
 from llm_client import LLMClient
 from enrichment import LastFMClient
 from essentia_client import EssentiaClient
-from utils import match_tracks, clear_cache
+from utils import match_tracks, clear_cache, fill_missing_features
 
 # Load config
 load_dotenv()
@@ -96,6 +96,9 @@ with st.sidebar:
                         # Estimate
                         st.session_state.library_cache = lastfm_client.apply_estimated_features(st.session_state.library_cache)
                 
+                # 5. Fallback Heuristics (if still missing)
+                st.session_state.library_cache = fill_missing_features(st.session_state.library_cache)
+                
                 st.success("Audio features updated successfully (including estimates)!")
                 st.rerun() # Force UI update
             except Exception as e:
@@ -134,10 +137,25 @@ col1, col2 = st.columns([3, 1])
 with col1:
     mode = st.radio("Mode", ["AI Prompt", "Artist Radio", "Journey", "Mood Map", "Genre Explorer"], horizontal=True)
     
+    # Clear results if mode changes
+    if 'last_mode' not in st.session_state:
+        st.session_state.last_mode = mode
+    
+    if mode != st.session_state.last_mode:
+        st.session_state.matched_items = None
+        st.session_state.generated_request = ""
+        st.session_state.last_mode = mode
+        st.rerun()
+    
     if mode == "AI Prompt":
         user_request = st.text_area("What do you want to listen to?", placeholder="e.g., 'Upbeat 80s pop songs for a workout'")
     elif mode == "Artist Radio":
         user_request = st.text_input("Enter an Artist Name", placeholder="e.g., 'James Brown'")
+        c1, c2 = st.columns(2)
+        with c1:
+            depth = st.slider("Discovery Depth", 1, 3, 2, help="1=Directly similar, 2=Similar to similar, etc.")
+        with c2:
+            max_per_artist = st.number_input("Max per Artist", 1, 20, 3, help="Prevent one artist from dominating the playlist.")
     elif mode == "Journey":
         # We need the library loaded to populate the selectboxes.
         # This is a bit tricky in Streamlit flow. We'll try to load from cache or fetch if needed.
@@ -191,6 +209,9 @@ with col1:
                      if lastfm_client:
                          st.session_state.library_cache = lastfm_client.apply_tags(st.session_state.library_cache)
                          st.session_state.library_cache = lastfm_client.apply_estimated_features(st.session_state.library_cache)
+                     
+                     # Fallback Heuristics
+                     st.session_state.library_cache = fill_missing_features(st.session_state.library_cache)
                  except:
                      st.session_state.library_cache = []
         
@@ -276,8 +297,8 @@ with col1:
         library = st.session_state.library_cache
         
         from genre_mapper import GenreMapper
-        if 'genre_mapper' not in st.session_state:
-            st.session_state.genre_mapper = GenreMapper()
+        # Always reload to ensure fresh genres.json
+        st.session_state.genre_mapper = GenreMapper()
             
         mapper = st.session_state.genre_mapper
         
@@ -291,6 +312,7 @@ with col1:
             labels=stats['labels'],
             parents=stats['parents'],
             values=stats['values'],
+            marker=dict(colors=stats['colors']),
             insidetextorientation='radial'
         ))
         fig.update_layout(margin = dict(t=0, l=0, r=0, b=0), height=400)
@@ -301,6 +323,11 @@ with col1:
         # We need to handle the selection state
         if 'selected_genre_node' not in st.session_state:
             st.session_state.selected_genre_node = "All Music"
+            
+        # Reset Button
+        if st.button("Reset Chart"):
+            st.session_state.selected_genre_node = "All Music"
+            st.rerun()
 
         # Render chart and capture click
         # Note: plotly_events returns a list of dicts
@@ -378,6 +405,9 @@ if st.button("Curate Playlist", type="primary", disabled=not (plex_client and (l
                 # 1d. Fallback Estimates
                 if lastfm_client:
                     library = lastfm_client.apply_estimated_features(library)
+                
+                # 1e. Fallback Heuristics
+                library = fill_missing_features(library)
                      # Add More Feature
                 if st.button("➕ Add More Songs"):
                     try:
@@ -440,9 +470,9 @@ if st.button("Curate Playlist", type="primary", disabled=not (plex_client and (l
             # BRANCH: Genre Explorer
             if mode == "Genre Explorer":
                 from genre_mapper import GenreMapper
-                if 'genre_mapper' not in st.session_state:
-                    st.session_state.genre_mapper = GenreMapper()
-                mapper = st.session_state.genre_mapper
+                # Always reload mapper to pick up json changes
+                mapper = GenreMapper()
+                st.session_state.genre_mapper = mapper
                 
                 with st.spinner(f"Finding tracks for {user_request}..."):
                     genre_tracks = mapper.get_tracks_in_genre(user_request, library)
@@ -565,27 +595,37 @@ if st.button("Curate Playlist", type="primary", disabled=not (plex_client and (l
                 if not lastfm_client or not lastfm_client.api_key:
                     st.error("Last.fm is required for Artist Radio.")
                     st.stop()
+                
+                # Depth Control (Moved to Input Section)
+                # depth = st.slider("Discovery Depth", 1, 3, 1, help="1=Directly similar, 2=Similar to similar, etc. Higher depth finds more obscure connections.")
+                
+                with st.spinner(f"Finding artists similar to '{user_request}' (Depth {depth})..."):
+                    # Returns dict {artist: weight}
+                    similar_artists_map = lastfm_client.get_similar_artists_recursive(user_request, depth=depth, limit_per_step=10)
                     
-                with st.spinner(f"Finding artists similar to '{user_request}'..."):
-                    similar_artists = lastfm_client.get_similar_artists(user_request, limit=50)
-                    # Add the seed artist themselves
-                    similar_artists.insert(0, user_request)
-                    
-                if not similar_artists:
+                if not similar_artists_map:
                     st.error("No similar artists found.")
                     st.stop()
                     
-                st.write(f"Found {len(similar_artists)-1} similar artists: {', '.join(similar_artists[1:6])}...")
+                # Sort by weight for display
+                sorted_artists = sorted(similar_artists_map.items(), key=lambda x: x[1], reverse=True)
+                top_names = [a[0] for a in sorted_artists[:5] if a[0].lower() != user_request.lower()]
+                st.write(f"Found {len(similar_artists_map)} related artists. Top matches: {', '.join(top_names)}...")
                 
                 # Filter library
                 lib_artists = list(set(t['artist'] for t in library))
                 valid_artists = []
                 
                 # Normalize for comparison
-                sim_artists_lower = [a.lower() for a in similar_artists]
+                sim_artists_lower = {a.lower(): w for a, w in similar_artists_map.items()}
+                
+                # Map library artist -> weight
+                artist_weights = {}
                 
                 for lib_artist in lib_artists:
                     if lib_artist.lower() in sim_artists_lower:
+                        weight = sim_artists_lower[lib_artist.lower()]
+                        artist_weights[lib_artist] = weight
                         valid_artists.append(lib_artist)
                         
                 if not valid_artists:
@@ -594,20 +634,83 @@ if st.button("Curate Playlist", type="primary", disabled=not (plex_client and (l
                     
                 st.success(f"Found {len(valid_artists)} matching artists in your library.")
                 
-                # Collect tracks
-                candidate_tracks = [t for t in library if t['artist'] in valid_artists]
+                # Collect tracks with weights
+                candidate_tracks = []
+                track_weights = []
                 
-                # Randomly select num_songs
+                for t in library:
+                    if t['artist'] in artist_weights:
+                        candidate_tracks.append(t)
+                        track_weights.append(artist_weights[t['artist']])
+                
+                # Weighted Selection with Coverage Guarantee
                 import random
-                if len(candidate_tracks) > num_songs:
-                    selected_tracks = random.sample(candidate_tracks, num_songs)
-                else:
-                    selected_tracks = candidate_tracks
+                selected_tracks = []
+                selected_indices = set()
+                artist_counts = {}
+                
+                # Group tracks by artist
+                artist_tracks = {}
+                for t in candidate_tracks:
+                    a = t['artist']
+                    if a not in artist_tracks:
+                        artist_tracks[a] = []
+                    artist_tracks[a].append(t)
                     
+                # Phase 1: Coverage (One per artist)
+                # Sort artists by weight descending to prioritize best matches if we can't fit all
+                # But shuffle within same weight to avoid alphabetical bias
+                unique_artists = list(artist_tracks.keys())
+                # We need artist weights. We have `artist_weights` dict.
+                # Sort by (weight desc, random)
+                random.shuffle(unique_artists) # Shuffle first for tie-breaking
+                unique_artists.sort(key=lambda a: artist_weights[a], reverse=True)
+                
+                for artist in unique_artists:
+                    if len(selected_tracks) >= num_songs:
+                        break
+                        
+                    # Pick a random track from this artist
+                    tracks = artist_tracks[artist]
+                    choice = random.choice(tracks)
+                    
+                    selected_tracks.append(choice)
+                    selected_indices.add(choice['key'])
+                    artist_counts[artist] = 1
+                    
+                # Phase 2: Fill (Weighted Random)
+                # Only if we still have space
+                if len(selected_tracks) < num_songs:
+                    attempts = 0
+                    max_attempts = num_songs * 20
+                    
+                    while len(selected_tracks) < num_songs and attempts < max_attempts:
+                        attempts += 1
+                        # Pick one from full candidate pool
+                        choice = random.choices(candidate_tracks, weights=track_weights, k=1)[0]
+                        
+                        # Check uniqueness and artist limit
+                        if choice['key'] not in selected_indices:
+                            artist = choice['artist']
+                            if artist_counts.get(artist, 0) < max_per_artist:
+                                selected_tracks.append(choice)
+                                selected_indices.add(choice['key'])
+                                artist_counts[artist] = artist_counts.get(artist, 0) + 1
+                                
+                    # Fallback: If strict limits prevented filling, try to fill with anything unique
+                    if len(selected_tracks) < num_songs:
+                         remaining = [t for t in candidate_tracks if t['key'] not in selected_indices]
+                         random.shuffle(remaining)
+                         for t in remaining:
+                             if len(selected_tracks) >= num_songs:
+                                 break
+                             selected_tracks.append(t)
+                             selected_indices.add(t['key'])
+                            
                 st.session_state.matched_items = [{
                     'track': t,
-                    'score': 100,
-                    'suggestion': f"Similar to {user_request}"
+                    'score': int(artist_weights[t['artist']] * 100),
+                    'suggestion': f"Similar to {user_request} (Depth match)"
                 } for t in selected_tracks]
                 
             # BRANCH: AI Prompt
@@ -663,10 +766,67 @@ if st.session_state.matched_items:
     req_preview = st.session_state.generated_request[:20]
     playlist_name = f"AI: {req_preview}..."
     
+    
+    
+    
     if st.button(f"Save as '{playlist_name}' to Plex"):
         try:
             with st.spinner("Creating playlist on Plex..."):
-                created_title = plex_client.create_playlist(playlist_name, track_keys)
+                # Smart shuffle to avoid same artists back-to-back
+                import random
+                
+                # Create a list of (key, artist) tuples
+                # IMPORTANT: Convert all keys to strings to avoid mixed type issues
+                tracks_with_artists = [(str(item['track']['key']), item['track']['artist']) for item in matched_items]
+                
+                # DEBUG: Print what we're starting with
+                print(f"\n=== DEBUG: Starting with {len(tracks_with_artists)} tracks ===")
+                for i, (key, artist) in enumerate(tracks_with_artists[:5]):
+                    # Find the track title
+                    track_title = matched_items[i]['track']['title']
+                    print(f"  {i}: {track_title} - {artist} (key: {key})")
+                
+                # DEBUG: Check for duplicates
+                all_keys = [key for key, artist in tracks_with_artists]
+                unique_keys = set(all_keys)
+                if len(all_keys) != len(unique_keys):
+                    print(f"\n⚠️  WARNING: Found {len(all_keys) - len(unique_keys)} duplicate keys!")
+                    from collections import Counter
+                    key_counts = Counter(all_keys)
+                    duplicates = {k: v for k, v in key_counts.items() if v > 1}
+                    print(f"  Duplicate keys: {duplicates}")
+                
+                # Smart shuffle algorithm: spread out artists
+                shuffled = []
+                remaining = tracks_with_artists.copy()
+                random.shuffle(remaining)  # Initial randomization
+                
+                while remaining:
+                    # Try to find a track with a different artist than the last one
+                    if shuffled:
+                        last_artist = shuffled[-1][1]
+                        # Look for a track with a different artist
+                        different_artist_tracks = [t for t in remaining if t[1] != last_artist]
+                        if different_artist_tracks:
+                            next_track = random.choice(different_artist_tracks)
+                        else:
+                            # All remaining are same artist, just pick one
+                            next_track = remaining[0]
+                    else:
+                        # First track, pick randomly
+                        next_track = remaining[0]
+                    
+                    shuffled.append(next_track)
+                    remaining.remove(next_track)
+                
+                # Extract just the keys (already strings)
+                shuffled_keys = [key for key, artist in shuffled]
+                
+                # DEBUG: Print what we're sending
+                print(f"\n=== DEBUG: Sending {len(shuffled_keys)} shuffled keys ===")
+                print(f"First 5 keys: {shuffled_keys[:5]}")
+                
+                created_title = plex_client.create_playlist(playlist_name, shuffled_keys)
                 st.success(f"Playlist '{created_title}' created successfully!")
                 st.balloons()
         except Exception as e:

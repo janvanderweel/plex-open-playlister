@@ -24,24 +24,32 @@ class SemanticSearch:
     def index_library(self, library_data: List[Dict[str, Any]], force_refresh: bool = False):
         """
         Creates embeddings for the library. 
-        Checks if cache exists and matches the current library size/content.
+        Checks if cache exists and matches the current library keys.
         """
         self.library_data = library_data
+        current_keys = [t['key'] for t in library_data]
         
         # Check cache
         if not force_refresh and os.path.exists(EMBEDDING_CACHE_FILE):
             try:
                 with open(EMBEDDING_CACHE_FILE, "rb") as f:
                     cache = pickle.load(f)
-                    # Simple validation: check if length matches
-                    if len(cache["embeddings"]) == len(library_data):
+                    
+                    # Validate: check if keys match exactly
+                    if "library_keys" in cache and cache["library_keys"] == current_keys:
                         self.embeddings = cache["embeddings"]
-                        # print("Loaded embeddings from cache.")
+                        print(f"✓ Loaded {len(self.embeddings)} embeddings from cache (keys validated).")
                         return
+                    elif "library_keys" in cache:
+                        print(f"⚠ Cache key mismatch: regenerating embeddings...")
+                        print(f"  Cache has {len(cache['library_keys'])} keys, library has {len(current_keys)} keys")
+                    else:
+                        print(f"⚠ Old cache format (no keys stored): regenerating embeddings...")
             except Exception as e:
                 print(f"Error loading embedding cache: {e}")
 
         # If no cache or invalid, generate new embeddings
+        print(f"Generating fresh embeddings for {len(library_data)} tracks...")
         self._load_model()
         
         # Prepare text to embed: "Title - Artist - Album - Tags" gives best context
@@ -55,9 +63,13 @@ class SemanticSearch:
         with st.spinner(f"Generating embeddings for {len(texts)} tracks..."):
             self.embeddings = self.model.encode(texts, show_progress_bar=True)
             
-        # Save cache
+        # Save cache with keys for validation
         with open(EMBEDDING_CACHE_FILE, "wb") as f:
-            pickle.dump({"embeddings": self.embeddings}, f)
+            pickle.dump({
+                "embeddings": self.embeddings,
+                "library_keys": current_keys
+            }, f)
+        print(f"✓ Generated and cached {len(self.embeddings)} embeddings with key validation.")
 
     def search(self, query: str, top_k: int = 100) -> List[Dict[str, Any]]:
         """
@@ -83,22 +95,46 @@ class SemanticSearch:
             
         return results
 
-    def generate_journey(self, start_track_key: str, end_track_key: str, num_steps: int = 10) -> List[Dict[str, Any]]:
+    def generate_journey(self, start_track_key, end_track_key, num_steps: int = 10) -> List[Dict[str, Any]]:
         """
         Generates a playlist that transitions from start_track to end_track.
         Uses vector interpolation.
+        
+        Args:
+            start_track_key: Plex ratingKey (string or int) for the starting track
+            end_track_key: Plex ratingKey (string or int) for the ending track
+            num_steps: Number of tracks in the journey
         """
+        # Normalize keys to strings (Plex returns strings, but handle ints just in case)
+        start_key_str = str(start_track_key)
+        end_key_str = str(end_track_key)
+        
+        # Debug: Check state
+        print(f"\n=== Journey Debug ===")
+        print(f"Library data loaded: {len(self.library_data)} tracks")
+        print(f"Embeddings loaded: {self.embeddings is not None}")
+        if self.embeddings is not None:
+            print(f"Embeddings shape: {self.embeddings.shape}")
+        print(f"Start track key: {start_key_str} (original: {start_track_key}, type: {type(start_track_key).__name__})")
+        print(f"End track key: {end_key_str} (original: {end_track_key}, type: {type(end_track_key).__name__})")
+        
         if self.embeddings is None or len(self.library_data) == 0:
+            print("ERROR: Embeddings or library data not loaded!")
             return []
             
         import numpy as np
         
-        # Find indices of start and end tracks
-        start_idx = next((i for i, t in enumerate(self.library_data) if t['key'] == start_track_key), None)
-        end_idx = next((i for i, t in enumerate(self.library_data) if t['key'] == end_track_key), None)
+        # Find indices of start and end tracks (comparing strings)
+        start_idx = next((i for i, t in enumerate(self.library_data) if str(t['key']) == start_key_str), None)
+        end_idx = next((i for i, t in enumerate(self.library_data) if str(t['key']) == end_key_str), None)
         
         if start_idx is None or end_idx is None:
-            print("Start or End track not found in library data.")
+            print(f"ERROR: Start or End track not found in library data.")
+            print(f"Start track found: {start_idx is not None} (index: {start_idx})")
+            print(f"End track found: {end_idx is not None} (index: {end_idx})")
+            # Debug: Show a few track keys for comparison
+            print(f"Sample track keys from library: {[t['key'] for t in self.library_data[:5]]}")
+            print(f"Sample track key types: {[type(t['key']).__name__ for t in self.library_data[:5]]}")
             return []
             
         start_vec = self.embeddings[start_idx]
@@ -156,8 +192,8 @@ class SemanticSearch:
                 
                 # Key Compatibility (Camelot Wheel logic simplified)
                 # This is complex to implement fully without a library, but we can check for same key/mode
-                if 'key' in candidate and 'key' in journey_tracks[-1]:
-                    if candidate['key'] == journey_tracks[-1]['key'] and candidate['mode'] == journey_tracks[-1]['mode']:
+                if 'musical_key' in candidate and 'musical_key' in journey_tracks[-1]:
+                    if candidate['musical_key'] == journey_tracks[-1]['musical_key'] and candidate['mode'] == journey_tracks[-1]['mode']:
                          audio_score += 0.3
                 
                 # Semantic Score (implied by rank, but let's normalize rank)

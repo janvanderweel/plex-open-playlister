@@ -15,6 +15,24 @@
             "alternative-rock",
             "post-grunge",
             "modern rock"
+          ],
+          "children": [
+            {
+              "name": "Indie Pop Rock",
+              "aliases": [
+                "indie pop rock",
+                "twee pop",
+                "jangle pop"
+              ]
+            },
+            {
+              "name": "Post-Punk Revival",
+              "aliases": [
+                "post-punk revival",
+                "garage rock revival",
+                "new wave revival"
+              ]
+            }
           ]
         },
         {
@@ -26,6 +44,22 @@
             "classic",
             "classic-rock",
             "oldies rock"
+          ],
+          "children": [
+            {
+              "name": "Blues Rock",
+              "aliases": [
+                "blues-rock",
+                "electric blues"
+              ]
+            },
+            {
+              "name": "Psychedelic Rock",
+              "aliases": [
+                "psychedelic rock",
+                "acid rock"
+              ]
+            }
           ]
         },
         {
@@ -35,6 +69,22 @@
             "hard-rock",
             "arena rock",
             "stadium rock"
+          ],
+          "children": [
+            {
+              "name": "Glam Metal",
+              "aliases": [
+                "glam rock",
+                "hair metal"
+              ]
+            },
+            {
+              "name": "Southern Rock",
+              "aliases": [
+                "southern rock",
+                "swamp rock"
+              ]
+            }
           ]
         },
         {
@@ -78,6 +128,13 @@
                 "nu-metal",
                 "rap metal"
               ]
+            },
+            {
+              "name": "Power Metal",
+              "aliases": [
+                "power metal",
+                "epic metal"
+              ]
             }
           ]
         },
@@ -104,6 +161,13 @@
                 "hc punk",
                 "hardcore-punk"
               ]
+            },
+            {
+              "name": "Skate Punk",
+              "aliases": [
+                "skatepunk",
+                "melodic hardcore"
+              ]
             }
           ]
         },
@@ -114,6 +178,20 @@
             "prog rock",
             "prog-rock",
             "progressive"
+          ],
+          "children": [
+            {
+              "name": "Symphonic Prog",
+              "aliases": [
+                "symphonic rock"
+              ]
+            },
+            {
+              "name": "Neoprog",
+              "aliases": [
+                "neo-progressive rock"
+              ]
+            }
           ]
         }
       ]
@@ -133,6 +211,20 @@
             "tech house",
             "house music",
             "house-music"
+          ],
+          "children": [
+            {
+              "name": "Chicago House",
+              "aliases": [
+                "acid house"
+              ]
+            },
+            {
+              "name": "Electro House",
+              "aliases": [
+                "big room"
+              ]
+            }
           ]
         },
         {
@@ -141,6 +233,20 @@
             "minimal techno",
             "techno music",
             "techno-music"
+          ],
+          "children": [
+            {
+              "name": "Detroit Techno",
+              "aliases": [
+                "motor city techno"
+              ]
+            },
+            {
+              "name": "Hard Techno",
+              "aliases": [
+                "schranz"
+              ]
+            }
           ]
         },
         {
@@ -149,6 +255,20 @@
             "psytrance",
             "uplifting trance",
             "trance-music"
+          ],
+          "children": [
+            {
+              "name": "Progressive Trance",
+              "aliases": [
+                "prog-trance"
+              ]
+            },
+            {
+              "name": "Goa Trance",
+              "aliases": [
+                "goa"
+              ]
+            }
           ]
         },
         {
@@ -159,6 +279,21 @@
             "drum n bass",
             "jungle",
             "drum-and-bass"
+          ],
+          "children": [
+            {
+              "name": "Neurofunk",
+              "aliases": [
+                "neuro"
+              ]
+            },
+            {
+              "name": "Liquid Funk",
+              "aliases": [
+                "liquicity",
+                "liquid dnb"
+              ]
+            }
           ]
         },
         {
@@ -168,6 +303,21 @@
             "downtempo",
             "ambient music",
             "ambient-music"
+          ],
+          "children": [
+            {
+              "name": "IDM",
+              "aliases": [
+                "intelligent dance music",
+                "braindance"
+              ]
+            },
+            {
+              "name": "Vaporwave",
+              "aliases": [
+                "chillwave"
+              ]
+            }
           ]
         },
         {
@@ -191,6 +341,15 @@
             "indiepop",
             "indie-pop",
             "bedroom pop"
+          ],
+          "children": [
+            {
+              "name": "Dream Pop",
+              "aliases": [
+                "shoegaze",
+                "ethereal wave"
+              ]
+            }
           ]
         },
         {
@@ -207,6 +366,13 @@
             "dance",
             "dance-pop",
             "electropop"
+          ]
+        },
+        {
+          "name": "K-Pop",
+          "aliases": [
+            "kpop",
+            "korean pop"
           ]
         }
       ]
@@ -234,6 +400,14 @@
             "trap music",
             "trap-rap",
             "atl trap"
+          ],
+          "children": [
+            {
+              "name": "Cloud Rap",
+              "aliases": [
+                "ambient hip hop"
+              ]
+            }
           ]
         },
         {
@@ -242,6 +416,28 @@
             "gangsta",
             "gangster rap",
             "west coast rap"
+          ]
+        },
+        {
+          "name": "Alternative Hip Hop",
+          "aliases": [
+            "alt hip hop",
+            "underground hip hop",
+            "conscious rap"
+          ],
+          "children": [
+            {
+              "name": "Jazz Rap",
+              "aliases": [
+                "jazz hip hop"
+              ]
+            },
+            {
+              "name": "Trip Hop",
+              "aliases": [
+                "trip-hop"
+              ]
+            }
           ]
         }
       ]
@@ -254,6 +450,20 @@
           "aliases": [
             "hard bop",
             "bebop jazz"
+          ],
+          "children": [
+            {
+              "name": "Cool Jazz",
+              "aliases": [
+                "west coast jazz"
+              ]
+            },
+            {
+              "name": "Modal Jazz",
+              "aliases": [
+                "post-bop"
+              ]
+            }
           ]
         },
         {
@@ -262,6 +472,14 @@
             "jazz fusion",
             "fusion jazz",
             "jazz-rock"
+          ],
+          "children": [
+            {
+              "name": "Acid Jazz",
+              "aliases": [
+                "nu jazz"
+              ]
+            }
           ]
         },
         {
@@ -270,6 +488,12 @@
             "smooth",
             "smooth-jazz",
             "easy listening jazz"
+          ]
+        },
+        {
+          "name": "Swing",
+          "aliases": [
+            "big band"
           ]
         }
       ]
@@ -289,6 +513,14 @@
             "neo-soul",
             "motown",
             "soul music"
+          ],
+          "children": [
+            {
+              "name": "Quiet Storm",
+              "aliases": [
+                "urban contemporary"
+              ]
+            }
           ]
         },
         {
@@ -297,6 +529,14 @@
             "p-funk",
             "funk music",
             "funky"
+          ],
+          "children": [
+            {
+              "name": "G-Funk",
+              "aliases": [
+                "funk rap"
+              ]
+            }
           ]
         },
         {
@@ -305,6 +545,13 @@
             "disco",
             "nu-disco",
             "70s disco"
+          ]
+        },
+        {
+          "name": "Contemporary R&B",
+          "aliases": [
+            "contemporary rnb",
+            "alt-r&b"
           ]
         }
       ]
@@ -323,6 +570,14 @@
             "vivaldi",
             "baroque period",
             "baroque music"
+          ],
+          "children": [
+            {
+              "name": "Concerto Grosso",
+              "aliases": [
+                "chamber music baroque"
+              ]
+            }
           ]
         },
         {
@@ -332,6 +587,21 @@
             "chopin",
             "romantic era",
             "romantic music"
+          ],
+          "children": [
+            {
+              "name": "Late Romantic",
+              "aliases": [
+                "post-romantic"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Impressionist",
+          "aliases": [
+            "debussy",
+            "ravel"
           ]
         }
       ]
@@ -358,6 +628,27 @@
             "dancehall reggae",
             "dancehall music"
           ]
+        },
+        {
+          "name": "Ska",
+          "aliases": [
+            "ska music",
+            "rocksteady"
+          ],
+          "children": [
+            {
+              "name": "2 Tone",
+              "aliases": [
+                "two tone"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Dub",
+          "aliases": [
+            "dub music"
+          ]
         }
       ]
     },
@@ -375,6 +666,21 @@
             "americana",
             "bluegrass",
             "country music"
+          ],
+          "children": [
+            {
+              "name": "Outlaw Country",
+              "aliases": [
+                "honky tonk"
+              ]
+            }
+          ]
+        },
+        {
+          "name": "World Folk",
+          "aliases": [
+            "celtic folk",
+            "african folk"
           ]
         }
       ]

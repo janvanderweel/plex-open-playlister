@@ -139,9 +139,14 @@ class LastFMClient:
     def get_similar_artists(self, artist: str, limit: int = 20) -> List[str]:
         """
         Fetches similar artists from Last.fm.
+        Uses caching.
         """
         if not self.api_key:
             return []
+            
+        cache_key = f"similar:{artist}:{limit}"
+        if cache_key in self.cache:
+            return self.cache[cache_key]
             
         params = {
             "method": "artist.getsimilar",
@@ -159,6 +164,12 @@ class LastFMClient:
                 artists = []
                 for a in data.get("similarartists", {}).get("artist", []):
                     artists.append(a["name"])
+                
+                # Cache
+                self.cache[cache_key] = artists
+                self._save_cache()
+                time.sleep(0.2)
+                
                 return artists
             else:
                 print(f"Last.fm Error: {response.status_code}")
@@ -167,6 +178,65 @@ class LastFMClient:
         except Exception as e:
             print(f"Error fetching similar artists: {e}")
             return []
+
+    def get_similar_artists_recursive(self, seed_artist: str, depth: int = 1, limit_per_step: int = 10) -> Dict[str, float]:
+        """
+        Recursively fetches similar artists up to a certain depth.
+        Returns a dictionary {artist_name: weight}.
+        Weight decays with depth (e.g. 1.0 -> 0.5 -> 0.25).
+        """
+        weights = {seed_artist: 1.0}
+        visited = {seed_artist}
+        current_level_artists = [seed_artist]
+        
+        for d in range(1, depth + 1):
+            next_level_artists = []
+            level_weight = 1.0 / (2 ** (d - 1)) # 1.0, 0.5, 0.25...
+            
+            # For deeper levels, we might want to limit how many parents we query to avoid explosion
+            # If we have 10 level 1 artists, we don't want to query all 10 for level 2 if it takes too long.
+            # But let's try to do it, maybe with a smaller limit per step.
+            
+            # Progress bar support could be passed in, but for now we just print/log
+            print(f"Fetching level {d} for {len(current_level_artists)} artists...")
+            
+            for parent_artist in current_level_artists:
+                # Fetch similar
+                similar = self.get_similar_artists(parent_artist, limit=limit_per_step)
+                
+                for sim_artist in similar:
+                    if sim_artist not in weights:
+                        # New discovery
+                        # Weight is based on level. 
+                        # Actually, if it's level 1 (direct similar), weight is 1.0?
+                        # Let's say seed is level 0 (weight 1.0).
+                        # Level 1 similar artists get weight 1.0? Or 0.5?
+                        # Usually direct similar is strong. Let's say Level 1 = 1.0, Level 2 = 0.5
+                        
+                        # Wait, logic check:
+                        # Seed = 1.0 (but we usually exclude seed from results or handle separately)
+                        # Level 1 neighbors = 1.0
+                        # Level 2 neighbors = 0.5
+                        
+                        # Let's adjust:
+                        # d=1 (Level 1): weight = 1.0
+                        # d=2 (Level 2): weight = 0.5
+                        
+                        w = 1.0 / (2 ** (d - 1))
+                        weights[sim_artist] = w
+                        next_level_artists.append(sim_artist)
+                    else:
+                        # Already found. Keep the higher weight (shortest path)
+                        # Since we traverse BFS, we always find shortest path first, so no update needed usually.
+                        pass
+                        
+            current_level_artists = next_level_artists
+            
+            # Rate limiting
+            if depth > 1:
+                time.sleep(0.5)
+                
+        return weights
 
     def apply_tags(self, library: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """

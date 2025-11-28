@@ -21,3 +21,6 @@ essentia_cache.json
 .vscode/
 .idea/
 .DS_Store
+
+# Build / Source
+essentia/

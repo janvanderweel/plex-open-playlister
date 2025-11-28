@@ -95,3 +95,45 @@ def normalize_key(title: str, artist: str) -> str:
         c_artist = c_artist[4:]
         
     return f"{c_title} - {c_artist}"
+
+def fill_missing_features(library: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Estimates missing Valence and Energy features using Danceability and BPM.
+    This is a fallback heuristic when Last.fm data is missing.
+    """
+    enriched_library = []
+    for track in library:
+        new_track = track.copy()
+        
+        # Check if we need to fill missing features
+        needs_valence = 'valence' not in new_track or new_track['valence'] is None
+        needs_energy = 'energy' not in new_track or new_track['energy'] is None
+        
+        if needs_valence or needs_energy:
+            # We need at least danceability or bpm
+            danceability = new_track.get('danceability')
+            bpm = new_track.get('bpm')
+            
+            if danceability is not None:
+                # Heuristics
+                
+                # Energy: Heavily correlated with BPM and Danceability
+                if needs_energy:
+                    # Normalize BPM roughly to 0-1 (assuming 60-180 range)
+                    norm_bpm = 0.5
+                    if bpm:
+                        norm_bpm = min(max((bpm - 60) / 120, 0.0), 1.0)
+                    
+                    # Energy formula
+                    new_track['energy'] = (float(danceability) * 0.6) + (norm_bpm * 0.4)
+                    new_track['features_source'] = 'heuristic_estimated'
+                
+                # Valence: Hard to estimate, but often correlated with Danceability
+                if needs_valence:
+                    # Very rough proxy
+                    new_track['valence'] = float(danceability)
+                    new_track['features_source'] = 'heuristic_estimated'
+                    
+        enriched_library.append(new_track)
+        
+    return enriched_library

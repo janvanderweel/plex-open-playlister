@@ -102,7 +102,11 @@ class EssentiaClient:
         Scans library and analyzes tracks not in cache.
         """
         if not self.available:
-            st.warning("Essentia is not installed. Skipping local analysis.")
+            # Check if running in Streamlit context
+            try:
+                st.warning("Essentia is not installed. Skipping local analysis.")
+            except:
+                print("WARNING: Essentia is not installed. Skipping local analysis.")
             return
 
         tracks_to_process = []
@@ -122,12 +126,25 @@ class EssentiaClient:
 
         print(f"Analyzing {len(tracks_to_process)} tracks with Essentia...")
         
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        # Check if running in Streamlit context
+        try:
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            use_streamlit = True
+        except:
+            progress_bar = None
+            status_text = None
+            use_streamlit = False
         
         for i, (cache_key, track) in enumerate(tracks_to_process):
             file_path = track['file_path']
-            status_text.text(f"Analyzing: {track['title']}...")
+            
+            if use_streamlit:
+                status_text.text(f"Analyzing: {track['title']}...")
+            else:
+                # Print progress every 10 tracks in background mode
+                if i % 10 == 0:
+                    print(f"Progress: {i}/{len(tracks_to_process)} - Analyzing: {track['title']}")
             
             features = self.analyze_track(file_path)
             self.cache[cache_key] = features
@@ -135,16 +152,19 @@ class EssentiaClient:
             if i % 5 == 0:
                 self._save_cache()
             
-            progress = (i + 1) / len(tracks_to_process)
-            progress_bar.progress(progress)
-            
-            # Yield to UI loop if needed? Streamlit doesn't need explicit yield usually
+            if use_streamlit:
+                progress = (i + 1) / len(tracks_to_process)
+                progress_bar.progress(progress)
             
         self._save_cache()
-        status_text.text("Audio analysis complete!")
-        time.sleep(1)
-        status_text.empty()
-        progress_bar.empty()
+        
+        if use_streamlit:
+            status_text.text("Audio analysis complete!")
+            time.sleep(1)
+            status_text.empty()
+            progress_bar.empty()
+        else:
+            print(f"\n✅ Analysis complete! Processed {len(tracks_to_process)} tracks.")
 
     def apply_features(self, library: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -158,7 +178,7 @@ class EssentiaClient:
             
             if features and not features.get("not_found") and not features.get("error"):
                 new_track['bpm'] = features.get('tempo')
-                new_track['key'] = features.get('key')
+                new_track['musical_key'] = features.get('key')
                 new_track['mode'] = features.get('mode')
                 if features.get('energy') is not None:
                     new_track['energy'] = features.get('energy')

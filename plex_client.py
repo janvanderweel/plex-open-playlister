@@ -102,6 +102,12 @@ class PlexClient:
         """
         if not track_keys:
             raise ValueError("No tracks provided for playlist creation.")
+
+        # Be permissive about input types: Plex sometimes returns numeric ratingKey values.
+        # Ensure all keys are strings and drop any None values to avoid join() TypeError.
+        track_keys = [str(k) for k in track_keys if k is not None]
+        if not track_keys:
+            raise ValueError("No valid track keys provided for playlist creation.")
             
         import urllib3
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)

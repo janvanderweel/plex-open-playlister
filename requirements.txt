@@ -7,7 +7,13 @@ python-Levenshtein
 sentence-transformers
 scikit-learn
 pandas
-altair
+altair<6
 plotly
 streamlit-plotly-events
+gitpython
+pydeck
+pydantic
+# Essentia - may require compilation on ARM64 (see README for Pi instructions)
 essentia
+# NumPy 1.x required for Essentia compatibility
+numpy<2
